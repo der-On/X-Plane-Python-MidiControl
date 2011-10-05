@@ -1,0 +1,135 @@
+This script adds the possibility to map midi input signals to X-Plane datarefs and thus control the simulator using midi gear.
+
+Requirements:
+-------------
+
+- X-Plane
+- X-Plane's Python Interface for Python 2.7
+- Python 2.7
+- Pygame (Python based game development framework)
+
+
+Installation:
+-------------
+
+1. Copy the PI_midi_control.py to your PythonScripts folder located under X-Plane/Resources/plugins/PythonScripts
+2. Copy the midi_control.ini and midi_control_presets.ini under your PythonScripts folder and modify them to your needs.
+
+
+Usage:
+------
+
+This plugin uses ini-files to map midi signals to X-Planes datarefs.
+Use the default ini-files provided with this package as a starting point.
+They must be located in the PythonScripts directory. The mappings defined in that files are used globaly for each aircraft. However you can create an additional midi_control.ini and also additional midi_control_presets.ini for each aircraft in the aircrafts root folder. They will overwrite the global mappings or add to them.
+
+Midi-Input Server:
+
+Currently you need to start the midi-input server before you can use this plugin. The midi-input server is a single python file, the "midi_control.py". Start it from command line using the python interpreter: "python midi_control.py".
+
+The midi_control.py accepts the following command line parameters:
+-l			prints a list of attached midi-in devices with their device numbers
+-d [device-number(s)]	Sets the device(s) to use. The device numbers can be retrieved using the "-l" argument. Seperate numbers using a comma. Dont use whitespace/spaces in the list.
+-t			Starts the test-mode. This will active midi-in monitoring without the server actually working.
+
+Your devices will keep the same device number if attached to the same hub. Examples: "python midi_control.py -d 1" for using the first device, or "python midi_control.py -d 1,3" for using the devices 1 and 3.
+Currently only devices using midi-channel 1 can be used.
+
+You can stop the server by pressint CTRL-C in the console, which actually tells the python interpreter to stop running the script.
+
+
+Within the plugins menu in X-Plane you will find a menu titled "MidiControl".
+Click on "Toggle midi input monitoring" to get a window showing the last midi input signal.
+The signals are displayed as follows:
+("CC",1,120)
+
+The "CC" is the type of the signal. In this case its a Command-Change (=CC). The next number tells which command change (or in case of NOTE signals which note) it is. The last with which volume/value it was send.
+
+Possible signal types are:
+
+- CC = Command Change
+- NOTE_ON = a note was pressed
+- NOTE_OFF = a note was released
+- PROGRAM_CHANGE = Program change
+
+
+Ini-File structure:
+
+Within the midi_control.ini you define mappings of midi signals to X-Plane datarefs. Within midi_control_presets.ini you define presets you can reuse in midi_control.ini.
+Lets see how midi_control.ini and mid_control_presets.ini work by analysing an example:
+
+[sim/cockpit/electrical/avionics_on]
+type=NOTE_ON
+toggle=true
+midi_range=[0,127]
+data_range=[0,1]
+n=48
+
+This will do the following: When pressing down the key with the number 48 (a C2) the value for the dataref "sim/cockpit/electrical/avionics_on" will be toggled from 0 to 1 or from 1 to 0.
+The first line defines the dataref: [sim/cockpit/electrical/avionics_on]
+It must be within square brackes. The lines following the dataref define the mapping. After the mapping definition an empty line marks the end of this dataref mapping.
+The line "type=NOTE_ON" sets the type of midi signal to listen for. See above for all available types.
+"toggle=true" says that the dataref value will be toggled from one value (the min. value) to another value (the max. value).
+"midi_range=[0,127]" defines that the mapping will listen to all NOTE_ON signals within the volume range from 0 to 127, which is the full range. All midi signals range from 0 to 127 or from 1 to 128. Note that the min. and max. values are within square brackets seperated by a comma.
+"data_range=[0,1]" defines the min. and max. values the dataref should get according to the midi signal. Without the "toggle=true" it would mean, that when the key was pressed with 0 volume, the dataref would get a value of 0 and when the key was pressed with 127 (full) volume the dataref would get a value of 1. Pressing a volume inbetween 0 and 127 would set the dataref value to something between 0 and 1. However "toggle=true" tells it to behave like a toggle switch toggling between the min. and max. values in the "data_range".
+"n=48" defines the key to be pressed. In this case a C2. If type=CC it would define the command-change 48.
+
+This key-toggle mapping might be needed lots of times for all kinds of buttons/switches. So we can use a preset to make things simpler with a lot of dataref-mappings.
+In midi_control_presets.ini we add the following:
+
+[note_switch]
+type=NOTE_ON
+toggle=true
+midi_range=[0,127]
+data_range=[0,1]
+
+The first line defines the name of the preset. It must be in square brackets. In this case it is "note_switch".
+The following lines define the preset. Basically as you can see its almost the same as in our dataref-mapping above leaving out "n=48" only.
+A preset will auto apply all those mapping-definitions (lines) to a dataref-mapping. However you can overwrite preset settings within a dataref-defition.
+
+To make use of the preset "note_switch" we simply do the following within midi_control.py:
+
+[sim/cockpit/electrical/avionics_on]
+preset=note_switch
+n=48
+
+This will take all the settings from the preset making the definition 3 lines only instead of 6.
+
+Advanced dataref-mappings:
+
+You can go even further in your dataref-mappings using the "post_action" or "pre_action" and you can use python code within the "midi_range" and "data_range".
+An example for this is the nav1 dataref-mapping. It uses 2 different CCs (knobs on a keyboard) to control the HZ of the nav1:
+
+[0|sim/cockpit/radios/nav1_freq_hz]
+preset=cc_range
+n=9
+data_range=[10800,11700]
+post_action=value+(data-(round(data/100)*100)) ; remove hundreds from data to get tens and afterwards add value
+steps=9
+
+[1|sim/cockpit/radios/nav1_freq_hz]
+preset=cc_range
+n=10
+data_range=[0,95]
+post_action=(round(data/100)*100)+value ; round on hundreds and add value
+steps=19
+
+As we are applying two different midi signals to the same dataref we need to prefix them using "0|" and "1|". Use the pipe | symbol to add a prefix. Everything in front of the pipe is the prefix.
+In the first dataref-mapping we have a data_range from 10800 to 11700 wich are the hundreds of HZ.
+The second dataref-mapping has a range of 0 to 95 to get the fine tuning of the frequency.
+The "post_action" is actually python code which will execute after the normal value mapping was done. In this case it is used to manipulate the value before it is applied to the dataref. You have two variables present in the post_action and pre_action: "value" and "data"
+"value" is the currently calculated mapped value. "data" is the original value of the dataref.
+The "pre_action" will execute before the value will be mapped.
+At last we have "steps=9" and "steps=19". This defines a mapping "grid". So values will increase/decrease in hard steps instead of increasing/decreasing gradually. This was used here to increase the dataref by exactly 1 only in the first dataref-mapping and by exactly 5 only in the second.
+
+Using python code in data_range and midi_range can be helpfull also. An example for this is the propeller rotation speed control:
+
+[sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec_all]
+n=1
+preset=cc_range
+data_range=[getDataref('sim/aircraft/controls/acf_RSC_mingov_prp'),getDataref('sim/aircraft/controls/acf_RSC_redline_prp')]
+
+This dataref-mapping will use two other dataref values for the min. and max. values. Note that the python code will only execute once, when the mappings are loaded.
+
+
+
