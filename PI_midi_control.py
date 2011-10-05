@@ -15,7 +15,7 @@ from XPStandardWidgets import *
 
 try:
 	from pygame import midi
-	WITH_PYGAME = True
+	WITH_PYGAME = False #TODO set to true once we have a UI for selecting the device
 except:
 	WITH_PYGAME = False
 
