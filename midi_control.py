@@ -154,14 +154,16 @@ def parse_args():
 					if device_exists(device):
 						devices.append(device)
 						print("Using midi device: %s" % (midi.get_device_info(device)[1]))
-					else: print("Seems like the device #%d does not exist. Is it plugged in?" % device)
-
+					else:
+						print("Seems like the device #%d does not exist. Is it plugged in?" % device)
+						return
 				if testMode:
 					print("Running in test mode. No server was opened and your midi signals will be printed.")
 					test_mode(devices)
 				else: start(devices)
 			else:
 				print("Please specify the number of midi-in device(s)")
+				return
 
 	else:
 		print("Command line arguments:\n-l			Print out a list of midi-devices\n-d [device numbers]	Comma seperated list of device numbers to use. E.g. '2,3' (no spaces!)\-t			Run in test mode")
