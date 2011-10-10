@@ -280,8 +280,7 @@ class PythonInterface:
 
 	def XPluginReceiveMessage(self, inFromWho, inMessage, inParam):
 		if inMessage == XPLM_MSG_PLANE_LOADED and inParam == 0: # user plane loaded, so load midi bindings of the plane on top of base bindings
-			# self.LoadMidiBindings(SCRIPTS_PATH+'midi_control.ini')
-			pass
+			self.ReloadInis()
 	
 	def UpdateDatarefs(self,signals):
 		for signal in signals:
