@@ -132,4 +132,26 @@ data_range=[getDataref('sim/aircraft/controls/acf_RSC_mingov_prp'),getDataref('s
 This dataref-mapping will use two other dataref values for the min. and max. values. Note that the python code will only execute once, when the mappings are loaded.
 
 
+List of available mapping-definitions (placeholders are within {} ):
 
+preset={preset_name}		Name of a definition preset defined in midi_control_presets.ini
+n={number}			Number of the key or knob or button on the midi device
+type={Signal-Type}		Type of midi in signal to listen for. See above for possible signal types.
+toggle=true			Sets this midi mapping into toggle mode. Usefull for On/Off switches.
+relative=true			Makes value changes relative. This will add or substract values from the dataref. Usefull for infinite rotating knobs.
+additive=true			Makes value changes additive. This is similar to relative but also works for non infinite knobs/pedals.
+steps={number}			Will change dataref values according to midi in values in a "grid". The data_range will be divided into the number of steps and value changes will only happen within the resulting step size.
+midi_range=[{from},{to}]	The midi in signal will be mapped between those values to the data_range. It will also only update the dataref value if the midi signal is within the range.
+data_range=[{from},{to}]	The value range of the dataref the midi_range will be mapped to.
+data_min={number}		The minimal value the dataref can reach no matter what was set in data_range. This is especially usefull for relative or additive mappings.
+data_max={number}		The maximal value the dataref can reach no matter what was set in data_range. This is especially usefull for relative or additive mappings.
+pre_action={python code}	Python code that executes before the mapped value will update the dataref. It must return a value. That value will update the dataref. Available variables are "value" = the current mapped value and "data" = the original value of the dataref.
+post_action={python code}	Python code that executes after the pre_action, right before data_min and data_max are applied. See pre_action for details.
+pre_execute={python code}	Python code that will be executed before actuall value mapping occurs and right after the pre_action. It does not have to return a value. Available variables are "value" and "data" (See pre_action).
+post_execute={python code}	Python code that will be executed after the dataref was updated. See pre_execute for details.
+
+
+Available python helper functions (you can use those in pre_action,post_action,pre_execute and post_execute):
+
+getDataref(dataref,index = 0)			- This function returns the current value of a given dataref or None if the dataref was not found. If the dataref is an array an optional index can be passed.
+setDataref(dataref,value,index = 0,length = 1)	- This function sets the value of a given dataref. If the dataref is an array a starting index and a length can be specified. The value will be written at starting at the index and continuing until length was reached.
