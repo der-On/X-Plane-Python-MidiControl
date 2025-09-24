@@ -33,7 +33,8 @@ class request(BaseHTTPRequestHandler):
 		self.send_response(200)
 		self.send_header('Content-type', 'text/json')
 		self.end_headers()
-		self.wfile.write(str(get_all_signals()))
+		data = str(get_all_signals())
+		self.wfile.write(bytes(data, 'utf-8'))
 		return
 
 
