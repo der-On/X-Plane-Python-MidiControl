@@ -418,7 +418,7 @@ class PythonInterface:
 		else:
 			signals = []
 			try:
-				sock = urllib.urlopen('http://localhost:8000')
+				sock = urllib.request.urlopen('http://localhost:8000')
 				json = sock.read()
 				sock.close()
 				signals = eval(json)
