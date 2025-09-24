@@ -1,6 +1,7 @@
 import os.path
 import urllib, os
-from ConfigParser import ConfigParser
+import xp
+from configparser import ConfigParser
 from XPLMPlugin import *
 from XPLMProcessing import *
 from XPLMDataAccess import *
@@ -170,7 +171,7 @@ class PythonInterface:
 		# create menu
 		self.SubMenuItem = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "Midi Control", 0, 1)
 		self.MenuHandlerCB = self.MenuHandlerCallback
-		self.Menu = XPLMCreateMenu(self, "Midi Control", XPLMFindPluginsMenu(), self.SubMenuItem, self.MenuHandlerCB,	0)
+		self.Menu = XPLMCreateMenu("Midi Control", XPLMFindPluginsMenu(), self.SubMenuItem, self.MenuHandlerCB,	0)
 		XPLMAppendMenuItem(self.Menu, "Reload configuration", 0, 1)
 		XPLMAppendMenuItem(self.Menu, "Toggle midi input monitoring", 1, 1)
 
@@ -185,17 +186,17 @@ class PythonInterface:
 
 	def Uninit(self):
 		if self.MidiInWidget:
-			XPDestroyWidget(self,self.MidiInWidget,1)
+			XPDestroyWidget(self.MidiInWidget,1)
 			self.MidiInWidget = None
 
 		if self.Menu:
-			XPLMDestroyMenu(self,self.Menu)
+			XPLMDestroyMenu(self.Menu)
 			self.Menu = None
 
-	def XPluginStop(self):	
+	def XPluginStop(self):
 		self.Uninit()
 		pass
-	
+
 	def XPluginEnable(self):
 		self.midiInBuffer = ''
 		if WITH_PYGAME:
@@ -203,9 +204,9 @@ class PythonInterface:
 				init_devices(DEFAULT_DEVICES)
 			else:
 				init_devices(self.devices)
-			
+
 		self.FlightLoopCB = self.Update
-		XPLMRegisterFlightLoopCallback(self,self.FlightLoopCB,1.0,0)
+		XPLMRegisterFlightLoopCallback(self.FlightLoopCB,1.0,0)
 		self.ReloadInis()
 		return 1
 
@@ -213,7 +214,7 @@ class PythonInterface:
 		if inItemRef==0:
 			self.ReloadInis()
 		elif inItemRef==1:
-			if self.MidiInWidget:				
+			if self.MidiInWidget:
 				if(XPIsWidgetVisible(self.MidiInWidget)):
 					XPHideWidget(self.MidiInWidget)
 				else:
@@ -251,7 +252,7 @@ class PythonInterface:
 
 		# Register our widget handler
 		self.MidiInHandlerCB = self.MidiInHandler
-		XPAddWidgetCallback(self, self.MidiInWidget, self.MidiInHandlerCB)
+		XPAddWidgetCallback(self.MidiInWidget, self.MidiInHandlerCB)
 
 	def MidiInHandler(self, inMessage, inWidget,    inParam1, inParam2):
 		if (inMessage == xpMessage_CloseButtonPushed):
@@ -281,12 +282,12 @@ class PythonInterface:
 	def XPluginReceiveMessage(self, inFromWho, inMessage, inParam):
 		if inMessage == XPLM_MSG_PLANE_LOADED and inParam == 0: # user plane loaded, so load midi bindings of the plane on top of base bindings
 			self.ReloadInis()
-	
+
 	def UpdateDatarefs(self,signals):
 		for signal in signals:
 			signalType = signal[0]
 			n = str(signal[1])
-			
+
 			if signalType in self.bindings and n in self.bindings[signalType]:
 				for binding in self.bindings[signalType][n]:
 					self.UpdateDataref(signal,binding)
@@ -304,7 +305,7 @@ class PythonInterface:
 				v = 0
 			else:
 				v = 0
-		
+
 		# ignore values out of midi range
 		if within(v,binding['midi_range'][0],binding['midi_range'][1]):
 			dref = binding['dataref']
@@ -329,7 +330,7 @@ class PythonInterface:
 				step_size = float(binding['data_range'][1] - binding['data_range'][0])/float(binding['steps'])
 				step = round((value-binding['data_range'][0])/step_size)
 				value = float(binding['data_range'][0])+(step*step_size)
-				
+
 			if binding['toggle']:
 				if drefValue_orig == binding['data_range'][0]:
 					value = binding['data_range'][1]
@@ -349,7 +350,7 @@ class PythonInterface:
 					value = data_min
 				elif value>data_max:
 					value = data_max
-					
+
 				if binding['additive']:
 					value_add = value - binding['last_value']
 					value = self.RunAction(binding['pre_action'],drefValue_orig,value)
@@ -372,7 +373,7 @@ class PythonInterface:
 
 	def RunExecute(self,execute,data,value):
 		if execute:
-			exec execute
+			exec(execute)
 
 	def RunAction(self,action,data,value):
 		if action:
@@ -412,7 +413,7 @@ class PythonInterface:
 			return XPLMSetDatavf(dref,va,index,length)
 
 	def Update(self,inFlightLoopCallback, inInterval,inRelativeToNow, inRefcon):
-		if WITH_PYGAME: 
+		if WITH_PYGAME:
 			signals = get_all_signals()
 		else:
 			signals = []
@@ -429,39 +430,39 @@ class PythonInterface:
 			self.midiInBuffer = ''
 			for signal in signals:
 				self.midiInBuffer+=str(signal)+'\n'
-				
+
 			self.UpdateDatarefs(signals)
 
 		# update widget if any
 		if self.MidiInWidget:
 			XPSetWidgetDescriptor(self.MidiInWidgetCaption, self.midiInBuffer)
-			
+
 		return SLEEP_TIME
-	
+
 	def ApplyPreset(self,options):
 		if 'preset' in options and options['preset'] in self.presets:
 			for option in self.presets[options['preset']]:
 				if option not in options:
 					options[option] = self.presets[options['preset']][option]
-	
+
 		return options
 
 	def LoadPresets(self,iniFile, overwrite = False):
 		if overwrite == False:
 			self.presets = {}
-			
+
 		cp = ConfigParser()
 		cp.read(iniFile)
 		for section in cp.sections():
 			self.presets[section] = {}
 			for option in cp.options(section):
 				self.presets[section][option] = cp.get(section,option)
-	
+
 	def LoadMidiBindings(self,iniFile,overwrite = False):
 		self.ini = {}
 		if overwrite == False:
 			self.bindings = {'CC':{},'NOTE_ON':{},'NOTE_OFF':{}}
-		
+
 		cp = ConfigParser()
 		cp.read(iniFile)
 		for section in cp.sections():
@@ -470,11 +471,11 @@ class PythonInterface:
 			if len(parts)>1:
 				dataref = parts[1]
 			else: dataref = section
-			
+
 			if dataref not in self.ini:
 				self.ini[dataref] = []
 			options = {}
-			
+
 			for option in cp.options(section):
 				options[option] = cp.get(section,option)
 			self.ini[dataref].append(options)
