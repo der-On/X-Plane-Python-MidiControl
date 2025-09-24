@@ -20,7 +20,7 @@ try:
 except:
 	WITH_PYGAME = False
 
-SCRIPTS_PATH = os.path.join(os.getcwd(),"Resources","plugins","PythonScripts")
+SCRIPTS_PATH = os.path.join(os.getcwd(),"Resources","plugins","PythonPlugins")
 
 SLEEP_TIME = 0.1
 
@@ -496,7 +496,7 @@ class PythonInterface:
 
 					dref = XPLMFindDataRef(dataref)
 
-					if type(dref).__name__=='int':
+					if type(dref).__name__=='PyCapsule':
 						drefType = XPLMGetDataRefTypes(dref)
 						if drefType and drefType!=0:
 							if XPLMCanWriteDataRef(dref) and drefType in (INT_TYPE,FLOAT_TYPE,DOUBLE_TYPE,INTARRAY_TYPE,FLOATARRAY_TYPE):
